@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { X } from 'lucide-react';
+import HotspotSidebar from './HotspotSidebar';
 
 interface Hotspot {
   id: string;
@@ -20,6 +21,10 @@ interface Viewer360Props {
   currentId: string;
   onNavigate: (hotspot: Hotspot) => void;
   onUpdateHotspot: (id: string, data: Partial<Hotspot>) => void;
+  onEditHotspot: (id: string) => void;
+  onDeleteHotspot: (id: string) => void;
+  onDragStart: () => void;
+  onDragEnd: (id: string, info: any) => void;
   lastDrop: { id: string; x: number; y: number } | null;
   isSetupMode: boolean;
 }
@@ -31,6 +36,10 @@ const Viewer360: React.FC<Viewer360Props> = ({
   currentId, 
   onNavigate, 
   onUpdateHotspot, 
+  onEditHotspot,
+  onDeleteHotspot,
+  onDragStart,
+  onDragEnd,
   lastDrop, 
   isSetupMode 
 }) => {
@@ -163,7 +172,7 @@ const Viewer360: React.FC<Viewer360Props> = ({
       return sprite;
     };
 
-    hotspots.filter(h => h.id !== currentId && h.isPlaced).forEach(h => {
+    hotspots.filter(h => h.id !== currentId && h.isPlaced && h.phi !== undefined && h.theta !== undefined).forEach(h => {
       hotspotsGroup.add(createHotspotMesh(h));
     });
 
@@ -269,36 +278,43 @@ const Viewer360: React.FC<Viewer360Props> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm viewer-360-container">
-      <div className="relative w-[95vw] h-[90vh] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10">
-        <div ref={containerRef} className="w-full h-full cursor-move" />
-        <button
-          onClick={onClose}
-          className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-all hover:scale-110 active:scale-95"
-        >
-          <X size={24} />
-        </button>
-        
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 bg-black/50 backdrop-blur-xl rounded-2xl text-white text-[10px] font-bold uppercase tracking-wider flex gap-6 pointer-events-none border border-white/10">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-white/40" />
-            <span>Kéo để xoay</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>Click điểm để di chuyển</span>
-          </div>
-          {isSetupMode && (
-            <>
+      <div className="relative w-[95vw] h-[90vh] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex">
+        {isSetupMode && (
+          <HotspotSidebar 
+            className="w-16 md:w-20 lg:w-36 hover:w-72 z-10"
+            hotspots={hotspots}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onEdit={onEditHotspot}
+            onDelete={onDeleteHotspot}
+            onSelect={onNavigate}
+          />
+        )}
+        <div className="relative flex-1 h-full">
+          <div ref={containerRef} className="w-full h-full cursor-move" />
+          <button
+            onClick={onClose}
+            className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-all hover:scale-110 active:scale-95 z-20"
+          >
+            <X size={24} />
+          </button>
+          
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 bg-black/50 backdrop-blur-xl rounded-2xl text-white text-[10px] font-bold uppercase tracking-wider flex gap-6 pointer-events-none border border-white/10 z-20">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-white/40" />
+              <span>Kéo để xoay</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Click điểm để di chuyển</span>
+            </div>
+            {isSetupMode && (
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-amber-500" />
                 <span>Kéo thả từ sidebar để thêm điểm</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                <span>Alt + Kéo để chỉnh vị trí</span>
-              </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
