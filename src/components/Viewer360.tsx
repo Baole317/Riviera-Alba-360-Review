@@ -23,6 +23,8 @@ interface Viewer360Props {
   onUpdateHotspot: (id: string, data: Partial<Hotspot>) => void;
   onEditHotspot: (id: string) => void;
   onDeleteHotspot: (id: string) => void;
+  onDragStart: () => void;
+  onDragEnd: (id: string, info: any) => void;
   lastDrop: { id: string; x: number; y: number } | null;
   isSetupMode: boolean;
 }
@@ -36,6 +38,8 @@ const Viewer360: React.FC<Viewer360Props> = ({
   onUpdateHotspot, 
   onEditHotspot,
   onDeleteHotspot,
+  onDragStart,
+  onDragEnd,
   lastDrop, 
   isSetupMode 
 }) => {
@@ -279,6 +283,8 @@ const Viewer360: React.FC<Viewer360Props> = ({
           <HotspotSidebar 
             className="w-16 md:w-20 lg:w-36 hover:w-72 z-10"
             hotspots={hotspots}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
             onEdit={onEditHotspot}
             onDelete={onDeleteHotspot}
             onSelect={onNavigate}

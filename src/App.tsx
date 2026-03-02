@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   MapPin, 
   X, 
@@ -240,6 +241,8 @@ export default function App() {
           <HotspotSidebar 
             className="w-16 md:w-20 lg:w-36 hover:w-72"
             hotspots={hotspots}
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={handleDragEndFromSidebar}
             onEdit={setEditingHotspot}
             onDelete={deleteHotspot}
             onSelect={setSelectedHotspot}
@@ -267,7 +270,9 @@ export default function App() {
               className="relative w-full h-full flex items-center justify-center overflow-hidden"
             >
               <div className="relative inline-block max-w-[95%] max-h-[95%]">
-                <img 
+                <motion.img 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   src={sitePlan} 
                   alt="Site Plan" 
                   draggable="false"
@@ -276,13 +281,18 @@ export default function App() {
                 
                 <div className="absolute inset-0">
                   {hotspots.filter(h => h.isPlaced).map((h) => (
-                    <div
+                    <motion.div
                       key={h.id}
+                      drag={isSetupMode}
+                      dragMomentum={false}
+                      onDragStart={() => setIsDragging(true)}
+                      onDragEnd={(_, info) => handleDragEndOnMap(h.id, info)}
                       className={`absolute z-10 ${isSetupMode ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
                       style={{ 
                         left: `${h.x}%`, 
                         top: `${h.y}%`,
-                        transform: 'translate(-50%, -50%)'
+                        x: '-50%',
+                        y: '-50%'
                       }}
                     >
                       <div className="relative group/pin flex flex-col items-center">
@@ -301,7 +311,7 @@ export default function App() {
                           <div className="w-1.5 h-1.5 rounded-full bg-white" />
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </div>
@@ -323,57 +333,66 @@ export default function App() {
       </main>
 
       {/* Modals */}
-      {selectedHotspot && (
-        <Viewer360 
-          url={selectedHotspot.url} 
-          onClose={() => setSelectedHotspot(null)} 
-          hotspots={hotspots}
-          currentId={selectedHotspot.id}
-          onNavigate={(h) => setSelectedHotspot(h)}
-          onUpdateHotspot={(id, data) => {
-            setHotspots(prev => prev.map(h => h.id === id ? { ...h, ...data } : h));
-          }}
-          onEditHotspot={setEditingHotspot}
-          onDeleteHotspot={deleteHotspot}
-          lastDrop={lastDrop}
-          isSetupMode={isSetupMode}
-        />
-      )}
+      <AnimatePresence>
+        {selectedHotspot && (
+          <Viewer360 
+            url={selectedHotspot.url} 
+            onClose={() => setSelectedHotspot(null)} 
+            hotspots={hotspots}
+            currentId={selectedHotspot.id}
+            onNavigate={(h) => setSelectedHotspot(h)}
+            onUpdateHotspot={(id, data) => {
+              setHotspots(prev => prev.map(h => h.id === id ? { ...h, ...data } : h));
+            }}
+            onEditHotspot={setEditingHotspot}
+            onDeleteHotspot={deleteHotspot}
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={handleDragEndFromSidebar}
+            lastDrop={lastDrop}
+            isSetupMode={isSetupMode}
+          />
+        )}
 
-      {editingHotspot && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
-          <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl">
-            <h3 className="text-xl font-semibold mb-6">Đổi tên điểm</h3>
-            <input 
-              autoFocus
-              type="text"
-              defaultValue={hotspots.find(h => h.id === editingHotspot)?.name}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') updateHotspotName(editingHotspot, (e.target as HTMLInputElement).value);
-                if (e.key === 'Escape') setEditingHotspot(null);
-              }}
-              className="w-full px-4 py-3 bg-black/5 rounded-xl border-none focus:ring-2 focus:ring-black mb-6"
-            />
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setEditingHotspot(null)}
-                className="flex-1 py-3 font-medium text-black/40 hover:text-black transition-colors"
-              >
-                Hủy
-              </button>
-              <button 
-                onClick={() => {
-                  const input = document.querySelector('input') as HTMLInputElement;
-                  updateHotspotName(editingHotspot, input.value);
+        {editingHotspot && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl"
+            >
+              <h3 className="text-xl font-semibold mb-6">Đổi tên điểm</h3>
+              <input 
+                autoFocus
+                type="text"
+                defaultValue={hotspots.find(h => h.id === editingHotspot)?.name}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') updateHotspotName(editingHotspot, (e.target as HTMLInputElement).value);
+                  if (e.key === 'Escape') setEditingHotspot(null);
                 }}
-                className="flex-1 py-3 bg-black text-white rounded-xl font-medium hover:bg-black/80 transition-all"
-              >
-                Lưu thay đổi
-              </button>
-            </div>
+                className="w-full px-4 py-3 bg-black/5 rounded-xl border-none focus:ring-2 focus:ring-black mb-6"
+              />
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setEditingHotspot(null)}
+                  className="flex-1 py-3 font-medium text-black/40 hover:text-black transition-colors"
+                >
+                  Hủy
+                </button>
+                <button 
+                  onClick={() => {
+                    const input = document.querySelector('input') as HTMLInputElement;
+                    updateHotspotName(editingHotspot, input.value);
+                  }}
+                  className="flex-1 py-3 bg-black text-white rounded-xl font-medium hover:bg-black/80 transition-all"
+                >
+                  Lưu thay đổi
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {!sitePlan && hotspots.length > 0 && isSetupMode && (
         <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-30">
