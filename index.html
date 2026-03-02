@@ -59,7 +59,17 @@
 
     <script type="text/babel">
         const { useState, useRef, useEffect, useMemo } = React;
-        const { motion, AnimatePresence } = FramerMotion;
+        const motion = {
+            div: (props) => {
+                const { initial, animate, exit, whileDrag, drag, dragMomentum, dragSnapToOrigin, onDragStart, onDragEnd, ...rest } = props;
+                return <div {...rest} />;
+            },
+            img: (props) => {
+                const { initial, animate, exit, ...rest } = props;
+                return <img {...rest} />;
+            }
+        };
+        const AnimatePresence = ({ children }) => <React.Fragment>{children}</React.Fragment>;
         const { 
             MapPin, 
             X, 
@@ -456,7 +466,7 @@
             }, []);
 
             useEffect(() => {
-                fetch('/config.json')
+                fetch('./config.json')
                     .then(res => res.json())
                     .then(data => {
                         if (data) {
@@ -464,7 +474,11 @@
                             setHotspots(data.hotspots || []);
                         }
                     })
-                    .catch(() => console.log('No config.json found or error loading.'));
+                    .catch((err) => {
+                        console.log('No config.json found or error loading:', err);
+                        // Ensure app doesn't stay blank
+                        setHotspots([]);
+                    });
             }, []);
 
             const exportConfig = () => {
