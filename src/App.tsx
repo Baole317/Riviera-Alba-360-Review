@@ -1,0 +1,406 @@
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  MapPin, 
+  X, 
+  Upload, 
+  Image as ImageIcon, 
+  Plus, 
+  Edit3, 
+  Trash2, 
+  Download 
+} from 'lucide-react';
+import Viewer360 from './components/Viewer360';
+import HotspotSidebar from './components/HotspotSidebar';
+
+interface Hotspot {
+  id: string;
+  name: string;
+  url: string;
+  x: number;
+  y: number;
+  phi?: number;
+  theta?: number;
+  isPlaced: boolean;
+}
+
+export default function App() {
+  const [hotspots, setHotspots] = useState<Hotspot[]>([]);
+  const [sitePlan, setSitePlan] = useState<string | null>(null);
+  const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [editingHotspot, setEditingHotspot] = useState<string | null>(null);
+  const [lastDrop, setLastDrop] = useState<{ id: string; x: number; y: number } | null>(null);
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const isSetupMode = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('mode') === 'setup';
+  }, []);
+
+  // Auto-load config.json if it exists
+  useEffect(() => {
+    fetch('/config.json')
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          setSitePlan(data.sitePlan || null);
+          setHotspots(data.hotspots || []);
+        }
+      })
+      .catch(() => console.log('No config.json found or error loading.'));
+  }, []);
+
+  const exportConfig = () => {
+    const config = {
+      sitePlan: sitePlan,
+      hotspots: hotspots
+    };
+    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'config.json';
+    a.click();
+  };
+
+  const handleImportConfig = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result as string);
+          setSitePlan(data.sitePlan || null);
+          setHotspots(data.hotspots || []);
+        } catch (err) {
+          alert('Lỗi định dạng file JSON');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleSitePlanUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setSitePlan(url);
+    }
+  };
+
+  const handle360Upload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      Array.from(files).forEach((file: File) => {
+        const url = URL.createObjectURL(file);
+        const newHotspot: Hotspot = {
+          id: Math.random().toString(36).substr(2, 9),
+          name: file.name.split('.')[0] || 'Điểm mới',
+          url: url,
+          x: 50,
+          y: 50,
+          isPlaced: false,
+        };
+        setHotspots((prev) => [...prev, newHotspot]);
+      });
+    }
+  };
+
+  const handleDragEndFromSidebar = (id: string, info: any) => {
+    if (containerRef.current && !selectedHotspot) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = ((info.point.x - rect.left) / rect.width) * 100;
+      const y = ((info.point.y - rect.top) / rect.height) * 100;
+
+      if (x >= 0 && x <= 100 && y >= 0 && y <= 100) {
+        setHotspots((prev) =>
+          prev.map((h) => (h.id === id ? { ...h, x, y, isPlaced: true } : h))
+        );
+      }
+    }
+    
+    const viewerElement = document.querySelector('.viewer-360-container');
+    if (viewerElement && selectedHotspot) {
+      const rect = viewerElement.getBoundingClientRect();
+      if (info.point.x >= rect.left && info.point.x <= rect.right && 
+          info.point.y >= rect.top && info.point.y <= rect.bottom) {
+        setLastDrop({ id, x: info.point.x, y: info.point.y });
+        setTimeout(() => setLastDrop(null), 100);
+      }
+    }
+    setIsDragging(false);
+  };
+
+  const handleDragEndOnMap = (id: string, info: any) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = ((info.point.x - rect.left) / rect.width) * 100;
+    const y = ((info.point.y - rect.top) / rect.height) * 100;
+    setHotspots((prev) =>
+      prev.map((h) => (h.id === id ? { ...h, x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) } : h))
+    );
+    setIsDragging(false);
+  };
+
+  const deleteHotspot = (id: string) => {
+    setHotspots((prev) => prev.filter((h) => h.id !== id));
+  };
+
+  const updateHotspotName = (id: string, name: string) => {
+    setHotspots((prev) => prev.map((h) => (h.id === id ? { ...h, name } : h)));
+    setEditingHotspot(null);
+  };
+
+  return (
+    <div className="h-screen flex flex-col bg-[#F8F9FA] font-sans text-[#1A1A1A]">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-black/5 px-6 py-4 grid grid-cols-3 items-center shrink-0">
+        {/* Left: Logo & Title */}
+        <div className="flex items-center gap-3">
+          <div className="w-24 h-24 flex items-center justify-center overflow-hidden">
+            <img 
+              src="https://binhanshipping.vn/wp-content/uploads/2024/07/cropped-logo-binh-an.webp" 
+              alt="Bình An Shipping Logo" 
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold tracking-tight text-[#0056b3]">Bình An Shipping JSC</h1>
+            <p className="text-[10px] text-black/60 font-medium leading-tight">Số 23 đường số 2, kp.3, P. Linh Xuân, Tp. HCM</p>
+          </div>
+        </div>
+
+        {/* Center: Functional Buttons */}
+        <div className="flex items-center justify-center gap-2">
+          {isSetupMode && (
+            <>
+              <button 
+                onClick={exportConfig}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-full text-xs font-medium hover:bg-emerald-700 transition-all shadow-sm"
+              >
+                <Download size={14} />
+                <span>Export</span>
+              </button>
+              
+              <label className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-full text-xs font-medium cursor-pointer hover:bg-amber-700 transition-all shadow-sm">
+                <Upload size={14} />
+                <span>Import</span>
+                <input type="file" accept=".json" className="hidden" onChange={handleImportConfig} />
+              </label>
+
+              <label className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-full text-xs font-medium cursor-pointer hover:bg-black/80 transition-all shadow-sm">
+                <Plus size={14} />
+                <span>Nạp 360°</span>
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handle360Upload} />
+              </label>
+              
+              {!sitePlan && (
+                <label className="flex items-center gap-2 px-4 py-2 bg-white border border-black/10 rounded-full text-xs font-medium cursor-pointer hover:bg-black/5 transition-all">
+                  <ImageIcon size={14} />
+                  <span>Mặt Bằng</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleSitePlanUpload} />
+                </label>
+              )}
+            </>
+          )}
+          {!isSetupMode && (
+             <a 
+              href="?mode=setup"
+              className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-full text-xs font-medium hover:bg-black/80 transition-all shadow-sm"
+            >
+              <Edit3 size={14} />
+              <span>Setup Mode</span>
+            </a>
+          )}
+        </div>
+
+        {/* Right: Project Info */}
+        <div className="flex flex-col items-end text-right">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest">Project:</span>
+            <span className="text-xs font-bold text-black/80">Riviera Alba</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest">Ngày khởi tạo:</span>
+            <span className="text-xs font-medium text-black/60">01/03/2026</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest">Người tạo:</span>
+            <span className="text-xs font-medium text-black/60">Lê Việt Bảo</span>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 flex overflow-hidden bg-[#F0F2F5]">
+        {/* Sidebar */}
+        {isSetupMode && (
+          <HotspotSidebar 
+            className="w-16 md:w-20 lg:w-36 hover:w-72"
+            hotspots={hotspots}
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={handleDragEndFromSidebar}
+            onEdit={setEditingHotspot}
+            onDelete={deleteHotspot}
+            onSelect={setSelectedHotspot}
+          />
+        )}
+
+        {/* Site Plan Area */}
+        <section className="h-full w-full relative flex items-center justify-center overflow-hidden">
+          {!sitePlan ? (
+            <div className="text-center p-12 bg-white rounded-[40px] shadow-2xl border border-black/5 max-w-sm mx-auto">
+              <div className="w-24 h-24 bg-black/5 rounded-full flex items-center justify-center mx-auto mb-8">
+                <ImageIcon size={40} className="text-black/20" />
+              </div>
+              <h3 className="text-2xl font-bold mb-3 tracking-tight">Bắt đầu dự án</h3>
+              <p className="text-black/40 mb-8 text-sm leading-relaxed">Tải lên hình ảnh mặt bằng để bắt đầu định vị các điểm 360°.</p>
+              <label className="inline-flex items-center gap-3 px-8 py-4 bg-black text-white rounded-2xl font-bold cursor-pointer hover:scale-105 transition-all shadow-xl shadow-black/20 active:scale-95">
+                <Upload size={20} />
+                <span>Chọn file mặt bằng</span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleSitePlanUpload} />
+              </label>
+            </div>
+          ) : (
+            <div 
+              ref={containerRef}
+              className="relative w-full h-full flex items-center justify-center overflow-hidden"
+            >
+              <div className="relative inline-block max-w-[95%] max-h-[95%]">
+                <motion.img 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  src={sitePlan} 
+                  alt="Site Plan" 
+                  draggable="false"
+                  className="max-w-full max-h-[90vh] object-contain select-none pointer-events-none rounded-xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.3)]"
+                />
+                
+                <div className="absolute inset-0">
+                  {hotspots.filter(h => h.isPlaced).map((h) => (
+                    <motion.div
+                      key={h.id}
+                      drag={isSetupMode}
+                      dragMomentum={false}
+                      onDragStart={() => setIsDragging(true)}
+                      onDragEnd={(_, info) => handleDragEndOnMap(h.id, info)}
+                      className={`absolute z-10 ${isSetupMode ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+                      style={{ 
+                        left: `${h.x}%`, 
+                        top: `${h.y}%`,
+                        x: '-50%',
+                        y: '-50%'
+                      }}
+                    >
+                      <div className="relative group/pin flex flex-col items-center">
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 bg-black/60 backdrop-blur-sm text-white text-[8px] font-bold uppercase tracking-wider rounded-md whitespace-nowrap shadow-sm border border-white/10 pointer-events-none">
+                          {h.name}
+                        </div>
+                        
+                        <div 
+                          onClick={() => !isDragging && setSelectedHotspot(h)}
+                          className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                            selectedHotspot?.id === h.id 
+                              ? 'bg-red-600/60 scale-110 shadow-[0_0_10px_rgba(220,38,38,0.6)]' 
+                              : 'bg-red-600/30 hover:bg-red-600/50 hover:scale-110 shadow-lg'
+                          } border-2 border-white`}
+                        >
+                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+              
+              {isSetupMode && (
+                <div className="absolute bottom-8 right-8 flex gap-3">
+                  <button 
+                    onClick={() => setSitePlan(null)}
+                    className="p-4 bg-white/80 backdrop-blur-md border border-black/5 rounded-2xl shadow-2xl hover:bg-red-50 text-red-500 transition-all hover:scale-110 active:scale-95"
+                    title="Xóa mặt bằng"
+                  >
+                    <Trash2 size={24} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      </main>
+
+      {/* Modals */}
+      <AnimatePresence>
+        {selectedHotspot && (
+          <Viewer360 
+            url={selectedHotspot.url} 
+            onClose={() => setSelectedHotspot(null)} 
+            hotspots={hotspots}
+            currentId={selectedHotspot.id}
+            onNavigate={(h) => setSelectedHotspot(h)}
+            onUpdateHotspot={(id, data) => {
+              setHotspots(prev => prev.map(h => h.id === id ? { ...h, ...data } : h));
+            }}
+            onEditHotspot={setEditingHotspot}
+            onDeleteHotspot={deleteHotspot}
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={handleDragEndFromSidebar}
+            lastDrop={lastDrop}
+            isSetupMode={isSetupMode}
+          />
+        )}
+
+        {editingHotspot && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl"
+            >
+              <h3 className="text-xl font-semibold mb-6">Đổi tên điểm</h3>
+              <input 
+                autoFocus
+                type="text"
+                defaultValue={hotspots.find(h => h.id === editingHotspot)?.name}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') updateHotspotName(editingHotspot, (e.target as HTMLInputElement).value);
+                  if (e.key === 'Escape') setEditingHotspot(null);
+                }}
+                className="w-full px-4 py-3 bg-black/5 rounded-xl border-none focus:ring-2 focus:ring-black mb-6"
+              />
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setEditingHotspot(null)}
+                  className="flex-1 py-3 font-medium text-black/40 hover:text-black transition-colors"
+                >
+                  Hủy
+                </button>
+                <button 
+                  onClick={() => {
+                    const input = document.querySelector('input') as HTMLInputElement;
+                    updateHotspotName(editingHotspot, input.value);
+                  }}
+                  className="flex-1 py-3 bg-black text-white rounded-xl font-medium hover:bg-black/80 transition-all"
+                >
+                  Lưu thay đổi
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {!sitePlan && hotspots.length > 0 && isSetupMode && (
+        <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-30">
+          <div className="bg-black text-white px-6 py-3 rounded-full text-sm font-medium shadow-2xl animate-bounce">
+            Tải mặt bằng lên để bắt đầu kéo thả các điểm!
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
