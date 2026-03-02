@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'motion/react';
 import { Plus, Edit3, Trash2 } from 'lucide-react';
 
 interface Hotspot {
@@ -15,8 +14,6 @@ interface Hotspot {
 
 interface HotspotSidebarProps {
   hotspots: Hotspot[];
-  onDragStart: () => void;
-  onDragEnd: (id: string, info: any) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onSelect: (hotspot: Hotspot) => void;
@@ -25,8 +22,6 @@ interface HotspotSidebarProps {
 
 const HotspotSidebar: React.FC<HotspotSidebarProps> = ({
   hotspots,
-  onDragStart,
-  onDragEnd,
   onEdit,
   onDelete,
   onSelect,
@@ -46,14 +41,9 @@ const HotspotSidebar: React.FC<HotspotSidebarProps> = ({
           </div>
         ) : (
           hotspots.map((h) => (
-            <motion.div
+            <div
               key={h.id}
-              drag
-              dragSnapToOrigin
-              onDragStart={onDragStart}
-              onDragEnd={(_, info) => onDragEnd(h.id, info)}
-              whileDrag={{ scale: 1.02, zIndex: 50 }}
-              className={`group p-2 rounded-xl transition-all cursor-grab active:cursor-grabbing border flex flex-col items-center md:items-start group-hover/sidebar:items-start select-none ${
+              className={`group p-2 rounded-xl transition-all border flex flex-col items-center md:items-start group-hover/sidebar:items-start select-none ${
                 h.isPlaced 
                   ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-900' 
                   : 'bg-white border-black/5 hover:border-black/20 shadow-sm'
@@ -91,7 +81,7 @@ const HotspotSidebar: React.FC<HotspotSidebarProps> = ({
                   <p className="text-[8px] opacity-40 font-mono">#{h.id.slice(0, 4)}</p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           ))
         )}
       </div>
