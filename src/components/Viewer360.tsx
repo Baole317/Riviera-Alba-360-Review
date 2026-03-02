@@ -190,11 +190,7 @@ const Viewer360: React.FC<Viewer360Props> = ({
       const intersects = raycaster.intersectObjects(hotspotsGroup.children);
       if (intersects.length > 0) {
         const clickedSprite = intersects[0].object as THREE.Sprite;
-        if (event.altKey && isSetupMode) {
-          setIsDraggingHotspot(clickedSprite.userData.id);
-        } else {
-          onNavigate(clickedSprite.userData.hotspot);
-        }
+        onNavigate(clickedSprite.userData.hotspot);
         return;
       }
 
@@ -206,27 +202,6 @@ const Viewer360: React.FC<Viewer360Props> = ({
     };
 
     const onPointerMove = (event: PointerEvent) => {
-      if (isDraggingHotspot && isSetupMode) {
-        if (!containerRef.current) return;
-        const rect = containerRef.current.getBoundingClientRect();
-        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera);
-        
-        const dir = raycaster.ray.direction.clone().normalize();
-        const pos = dir.multiplyScalar(400);
-        
-        const sprite = hotspotsGroup.children.find(c => c.userData.id === isDraggingHotspot) as THREE.Sprite | undefined;
-        if (sprite) {
-          sprite.position.copy(pos);
-          const r = pos.length();
-          const newLat = 90 - THREE.MathUtils.radToDeg(Math.acos(pos.y / r));
-          const newLon = THREE.MathUtils.radToDeg(Math.atan2(pos.z, pos.x));
-          onUpdateHotspot(isDraggingHotspot, { phi: newLat, theta: newLon });
-        }
-        return;
-      }
-
       if (isUserInteracting) {
         lon = (onPointerDownPointerX - event.clientX) * 0.1 + onPointerDownLon;
         lat = (event.clientY - onPointerDownPointerY) * 0.1 + onPointerDownLat;

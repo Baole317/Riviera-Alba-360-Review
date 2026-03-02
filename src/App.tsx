@@ -155,44 +155,51 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] font-sans text-[#1A1A1A]">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-b border-black/5 px-6 py-4 flex items-center justify-between">
+      <header className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-b border-black/5 px-6 py-4 grid grid-cols-3 items-center">
+        {/* Left: Logo & Title */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white">
-            <MapPin size={24} />
+          <div className="w-24 h-24 flex items-center justify-center overflow-hidden">
+            <img 
+              src="https://binhanshipping.vn/wp-content/uploads/2024/07/cropped-logo-binh-an.webp" 
+              alt="Bình An Shipping Logo" 
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">Riviera Alba 360</h1>
-            <p className="text-xs text-black/40 font-medium uppercase tracking-wider">Site Review Tool</p>
+            <h1 className="text-lg font-bold tracking-tight text-[#0056b3]">Bình An Shipping JSC</h1>
+            <p className="text-[10px] text-black/60 font-medium leading-tight">Số 23 đường số 2, kp.3, P. Linh Xuân, Tp. HCM</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Center: Functional Buttons */}
+        <div className="flex items-center justify-center gap-2">
           {isSetupMode && (
             <>
               <button 
                 onClick={exportConfig}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-full text-sm font-medium hover:bg-emerald-700 transition-all shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-full text-xs font-medium hover:bg-emerald-700 transition-all shadow-sm"
               >
-                <Download size={16} />
-                <span>Export JSON</span>
+                <Download size={14} />
+                <span>Export</span>
               </button>
               
-              <label className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-full text-sm font-medium cursor-pointer hover:bg-amber-700 transition-all shadow-sm">
-                <Upload size={16} />
-                <span>Import JSON</span>
+              <label className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-full text-xs font-medium cursor-pointer hover:bg-amber-700 transition-all shadow-sm">
+                <Upload size={14} />
+                <span>Import</span>
                 <input type="file" accept=".json" className="hidden" onChange={handleImportConfig} />
               </label>
 
-              <label className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-full text-sm font-medium cursor-pointer hover:bg-black/80 transition-all shadow-sm">
-                <Plus size={16} />
-                <span>Nạp Ảnh 360°</span>
+              <label className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-full text-xs font-medium cursor-pointer hover:bg-black/80 transition-all shadow-sm">
+                <Plus size={14} />
+                <span>Nạp 360°</span>
                 <input type="file" accept="image/*" multiple className="hidden" onChange={handle360Upload} />
               </label>
               
               {!sitePlan && (
-                <label className="flex items-center gap-2 px-4 py-2 bg-white border border-black/10 rounded-full text-sm font-medium cursor-pointer hover:bg-black/5 transition-all">
-                  <ImageIcon size={16} />
-                  <span>Tải Mặt Bằng</span>
+                <label className="flex items-center gap-2 px-4 py-2 bg-white border border-black/10 rounded-full text-xs font-medium cursor-pointer hover:bg-black/5 transition-all">
+                  <ImageIcon size={14} />
+                  <span>Mặt Bằng</span>
                   <input type="file" accept="image/*" className="hidden" onChange={handleSitePlanUpload} />
                 </label>
               )}
@@ -201,20 +208,36 @@ export default function App() {
           {!isSetupMode && (
              <a 
               href="?mode=setup"
-              className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-full text-sm font-medium hover:bg-black/80 transition-all shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-full text-xs font-medium hover:bg-black/80 transition-all shadow-sm"
             >
-              <Edit3 size={16} />
+              <Edit3 size={14} />
               <span>Setup Mode</span>
             </a>
           )}
         </div>
+
+        {/* Right: Project Info */}
+        <div className="flex flex-col items-end text-right">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest">Project:</span>
+            <span className="text-xs font-bold text-black/80">Riviera Alba</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest">Ngày khởi tạo:</span>
+            <span className="text-xs font-medium text-black/60">01/03/2026</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest">Người tạo:</span>
+            <span className="text-xs font-medium text-black/60">Lê Việt Bảo</span>
+          </div>
+        </div>
       </header>
 
       {/* Main Content */}
-      <main className="relative h-screen w-screen overflow-hidden bg-[#F0F2F5]">
+      <main className="relative h-screen w-screen overflow-hidden bg-[#F0F2F5] pt-32">
         {/* Floating Sidebar */}
         {isSetupMode && (
-          <aside className="absolute top-24 left-6 z-[60] w-16 md:w-20 lg:w-36 max-h-[calc(100vh-8rem)] bg-white/90 backdrop-blur-xl rounded-3xl border border-black/5 shadow-2xl flex flex-col overflow-hidden transition-all duration-300 hover:w-72 group/sidebar">
+          <aside className="absolute top-4 left-6 z-[60] w-16 md:w-20 lg:w-36 max-h-[calc(100vh-12rem)] bg-white/90 backdrop-blur-xl rounded-3xl border border-black/5 shadow-2xl flex flex-col overflow-hidden transition-all duration-300 hover:w-72 group/sidebar">
             <div className="p-4 border-b border-black/5 flex items-center justify-between">
               <h2 className="text-[10px] font-bold text-black/60 uppercase tracking-widest hidden md:block group-hover/sidebar:block">Điểm 360°</h2>
               <span className="px-2 py-0.5 bg-black/5 rounded-full text-[10px] font-bold mx-auto md:mx-0">{hotspots.length}</span>
