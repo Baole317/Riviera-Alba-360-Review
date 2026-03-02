@@ -1,0 +1,33 @@
+{
+  "sitePlan": "./siteplan.jpg",
+  "hotspots": [
+    {
+      "id": "2hpdmmwo7",
+      "name": "Lounge",
+      "url": "./Lounge.png",
+      "x": 36.33017947364793,
+      "y": 44.188693334361815,
+      "isPlaced": true
+    },
+    {
+      "id": "q84yw2bu6",
+      "name": "room1",
+      "url": "./room1.jpg",
+      "x": 78.36529899279144,
+      "y": 54.59033719228552,
+      "isPlaced": true,
+      "phi": -1.038076826679358,
+      "theta": -81.26898693783168
+    },
+    {
+      "id": "0eyezcemd",
+      "name": "room2",
+      "url": "./room2.jpg",
+      "x": 77.19955086386243,
+      "y": 60.11620781346755,
+      "isPlaced": true,
+      "phi": -1.4046258739461024,
+      "theta": -168.53329296032325
+    }
+  ]
+}
